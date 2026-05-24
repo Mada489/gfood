@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Liste de Courses</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap');
+  :root {
+    --bg: #0f0f0f; --card: #1a1a1a; --accent: #f5a623;
+    --accent2: #e8453c; --fays: #4ec9b0; --text: #f0ede8; --muted: #555;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; min-height: 100vh; padding: 24px 16px 120px; }
+  header h1 { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; color: var(--accent); letter-spacing: -1px; }
+  header p { color: var(--muted); font-size: 0.82rem; margin-top: 4px; }
+
+  /* Mode banner */
+  .mode-banner {
+    margin: 12px 0 6px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mode-banner.mode-moi { background: #1e1a0a; border: 1px solid var(--accent); color: var(--accent); }
+  .mode-banner.mode-fays { background: #0a1e1c; border: 1px solid var(--fays); color: var(--fays); }
+  .mode-banner .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .mode-banner.mode-moi .dot { background: var(--accent); }
+  .mode-banner.mode-fays .dot { background: var(--fays); }
+
+  .progress-wrap { margin: 10px 0 18px; }
+  .progress-row { display: flex; justify-content: space-between; font-size: 0.78rem; margin-bottom: 5px; }
+  .lbl-moi { color: var(--accent); font-weight: 700; }
+  .lbl-fays { color: var(--fays); font-weight: 700; }
+  .progress-bar { background: #222; border-radius: 99px; height: 5px; overflow: hidden; margin-bottom: 4px; }
+  .fill-moi { background: var(--accent); height: 100%; border-radius: 99px; transition: width 0.4s; }
+  .fill-fays { background: var(--fays); height: 100%; border-radius: 99px; transition: width 0.4s; }
+
+  .section { margin-bottom: 22px; }
+  .section-title { font-family: 'Syne', sans-serif; font-size: 0.68rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #444; border-bottom: 1px solid #1e1e1e; padding-bottom: 7px; margin-bottom: 8px; }
+  .item { display: flex; align-items: center; gap: 8px; padding: 9px 10px; background: var(--card); border-radius: 10px; margin-bottom: 6px; transition: opacity 0.2s; }
+  .item.both-done { opacity: 0.3; }
+  .chk-wrap { display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0; }
+  .chk { width: 22px; height: 22px; border-radius: 6px; border: 2px solid #333; flex-shrink: 0; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.18s; }
+  .chk.moi-done { background: var(--accent); border-color: var(--accent); }
+  .chk.fays-done { background: var(--fays); border-color: var(--fays); }
+  .chk.locked { cursor: default; opacity: 0.4; }
+  .chk svg { display: none; }
+  .chk.moi-done svg, .chk.fays-done svg { display: block; }
+  .chk-label { font-size: 0.58rem; font-weight: 700; letter-spacing: 0.5px; }
+  .chk-label.moi { color: var(--accent); }
+  .chk-label.fays { color: var(--fays); }
+  .item-name { flex: 1; font-size: 0.88rem; font-weight: 500; min-width: 0; }
+  .badge-imp { font-size: 0.6rem; background: var(--accent2); color: #fff; padding: 1px 5px; border-radius: 99px; font-weight: 700; flex-shrink: 0; }
+  .qty-wrap { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .qty-btn { width: 24px; height: 24px; border-radius: 6px; border: none; background: #2a2a2a; color: var(--text); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+  .qty-val { width: 32px; background: #222; border: 1px solid #333; border-radius: 6px; color: var(--accent); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.82rem; text-align: center; padding: 3px 2px; }
+  .qty-val:focus { outline: none; border-color: var(--accent); }
+  .action-btn { width: 30px; height: 30px; border-radius: 8px; border: none; background: #222; color: #555; font-size: 0.85rem; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.15s, color 0.15s; }
+  .action-btn.edit:hover { background: #1e1a0a; color: var(--accent); }
+  .action-btn.del:hover { background: #2a0f0f; color: var(--accent2); }
+  .add-item-btn { width: 100%; padding: 9px; border-radius: 8px; border: 1px dashed #2a2a2a; background: transparent; color: #3a3a3a; font-family: 'DM Sans', sans-serif; font-size: 0.82rem; cursor: pointer; text-align: left; transition: border-color 0.2s, color 0.2s; margin-top: 2px; }
+  .add-item-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* Archives */
+  .archives-section { margin-top: 30px; border-top: 1px solid #1e1e1e; padding-top: 20px; }
+  .archives-title { font-family: 'Syne', sans-serif; font-size: 0.7rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; color: #333; margin-bottom: 12px; }
+  .archive-card { background: #141414; border: 1px solid #1e1e1e; border-radius: 10px; padding: 12px 14px; margin-bottom: 10px; }
+  .archive-date { font-family: 'Syne', sans-serif; font-size: 0.72rem; font-weight: 700; color: #444; margin-bottom: 6px; }
+  .archive-stats { display: flex; gap: 14px; font-size: 0.75rem; }
+  .archive-stats span { color: #444; }
+  .archive-stats .s-moi { color: var(--accent); opacity: 0.7; }
+  .archive-stats .s-fays { color: var(--fays); opacity: 0.7; }
+
+  /* Bottom bar */
+  .bottom-bar { position: fixed; bottom: 0; left: 0; right: 0; background: #141414; border-top: 1px solid #222; padding: 10px 12px; display: flex; gap: 7px; }
+  .btn-valider { flex: 1.2; padding: 11px 8px; border-radius: 10px; border: none; background: var(--accent); color: #0a0a0a; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.75rem; cursor: pointer; white-space: nowrap; }
+  .btn-share { flex: 1; padding: 11px 8px; border-radius: 10px; border: none; background: var(--fays); color: #0a1e1c; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.75rem; cursor: pointer; white-space: nowrap; }
+  .btn-ticket { flex: 1; padding: 11px 8px; border-radius: 10px; border: 1px solid #2a2a2a; background: #1a1a1a; color: #888; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.75rem; cursor: pointer; white-space: nowrap; }
+  .btn-reset { padding: 11px 12px; border-radius: 10px; border: 1px solid #222; background: transparent; color: var(--muted); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.75rem; cursor: pointer; }
+
+  /* Modals */
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 200; align-items: flex-end; justify-content: center; }
+  .overlay.open { display: flex; }
+  .modal-box { background: #1c1c1c; border-radius: 18px 18px 0 0; border-top: 1px solid #2a2a2a; padding: 24px 20px 36px; width: 100%; max-width: 520px; animation: slideUp 0.22s ease; }
+  @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .modal-box h2 { font-family: 'Syne', sans-serif; font-size: 1.1rem; font-weight: 800; margin-bottom: 10px; }
+  .modal-box p { color: var(--muted); font-size: 0.85rem; margin-bottom: 16px; line-height: 1.5; }
+  .modal-input { width: 100%; background: #111; border: 1px solid #444; border-radius: 10px; color: var(--text); font-family: 'DM Sans', sans-serif; font-size: 0.95rem; padding: 12px 14px; margin-bottom: 16px; }
+  .modal-input:focus { outline: none; border-color: var(--accent); }
+  .modal-row { display: flex; gap: 10px; }
+  .modal-row-qty { display: flex; gap: 10px; margin-bottom: 16px; align-items: center; }
+  .modal-row-qty label { color: var(--muted); font-size: 0.82rem; flex-shrink: 0; }
+  .modal-qty-input { width: 70px; background: #111; border: 1px solid #444; border-radius: 10px; color: var(--text); font-family: 'Syne', sans-serif; font-weight: 700; font-size: 0.95rem; padding: 10px 12px; text-align: center; }
+  .modal-qty-input:focus { outline: none; border-color: var(--accent); }
+  .modal-btn { flex: 1; padding: 13px; border-radius: 10px; border: none; font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.85rem; cursor: pointer; }
+  .modal-btn.confirm-del { background: var(--accent2); color: #fff; }
+  .modal-btn.confirm-ok { background: var(--accent); color: #0a0a0a; }
+  .modal-btn.confirm-fays { background: var(--fays); color: #0a1e1c; }
+  .modal-btn.cancel { background: #252525; color: var(--muted); }
+  .modal-textarea { width: 100%; height: 150px; background: #111; border: 1px solid #333; border-radius: 10px; color: var(--text); font-size: 0.78rem; padding: 12px; resize: none; font-family: monospace; margin-bottom: 14px; }
+  .modal-textarea.big { height: 200px; }
+
+  /* Valider modal */
+  .valider-summary { background: #111; border-radius: 10px; padding: 14px; margin-bottom: 16px; }
+  .valider-row { display: flex; justify-content: space-between; font-size: 0.82rem; padding: 4px 0; border-bottom: 1px solid #1a1a1a; }
+  .valider-row:last-child { border-bottom: none; }
+  .valider-row .label { color: var(--muted); }
+  .valider-row .val-moi { color: var(--accent); font-weight: 700; font-family: 'Syne', sans-serif; }
+  .valider-row .val-fays { color: var(--fays); font-weight: 700; font-family: 'Syne', sans-serif; }
+
+  .toast { position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px); background: #222; border: 1px solid #333; color: var(--text); padding: 10px 22px; border-radius: 99px; font-size: 0.85rem; transition: transform 0.3s; z-index: 999; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .loading-screen { position: fixed; inset: 0; background: var(--bg); display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; gap: 12px; }
+  .spinner { width: 28px; height: 28px; border: 2px solid #2a2a2a; border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-screen p { color: var(--muted); font-size: 0.85rem; font-family: 'DM Sans', sans-serif; }
+</style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <p>Chargement...</p>
+</div>
+
+<header>
+  <h1>Courses</h1>
+  <p id="headerSub">Liste partagee</p>
+</header>
+
+<div class="mode-banner mode-moi" id="modeBanner">
+  <div class="dot"></div>
+  <span id="modeTxt">Tu es en mode MOI — seule ta colonne est cochable</span>
+</div>
+
+<div class="progress-wrap">
+  <div class="progress-row">
+    <span class="lbl-moi">MOI — <span id="cntMoi">0</span>/<span id="totalAll">0</span></span>
+    <span class="lbl-fays">FAYS — <span id="cntFays">0</span>/<span id="totalAll2">0</span></span>
+  </div>
+  <div class="progress-bar"><div class="fill-moi" id="fillMoi" style="width:0%"></div></div>
+  <div class="progress-bar"><div class="fill-fays" id="fillFays" style="width:0%"></div></div>
+</div>
+
+<div id="list"></div>
+
+<div id="archivesWrap"></div>
+
+<div class="bottom-bar">
+  <button class="btn-valider" id="btnValider" onclick="openValider()">Valider</button>
+  <button class="btn-share" onclick="openShare()">Envoyer a Fays</button>
+  <button class="btn-ticket" onclick="openTicket()">Ticket</button>
+  <button class="btn-reset" onclick="openReset()">Reset</button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Modal Ajouter -->
+<div class="overlay" id="modalAdd" onclick="closeModalBg(event,'modalAdd')">
+  <div class="modal-box">
+    <h2 style="color:var(--accent)">Ajouter un article</h2>
+    <p id="addCatLabel"></p>
+    <input class="modal-input" id="addNameInput" type="text" placeholder="Nom de l'article..." />
+    <div class="modal-row-qty">
+      <label>Quantite :</label>
+      <input class="modal-qty-input" id="addQtyInput" type="number" value="1" min="0" />
+    </div>
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeModal('modalAdd')">Annuler</button>
+      <button class="modal-btn confirm-ok" id="addConfirmBtn">Ajouter</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Supprimer -->
+<div class="overlay" id="modalDel">
+  <div class="modal-box">
+    <h2 style="color:var(--accent2)">Supprimer</h2>
+    <p id="delMsg">Supprimer cet article ?</p>
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeModal('modalDel')">Annuler</button>
+      <button class="modal-btn confirm-del" id="delConfirmBtn">Supprimer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Renommer -->
+<div class="overlay" id="modalEdit">
+  <div class="modal-box">
+    <h2 style="color:var(--accent)">Renommer</h2>
+    <input class="modal-input" id="editInput" type="text" placeholder="Nouveau nom..." />
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeModal('modalEdit')">Annuler</button>
+      <button class="modal-btn confirm-ok" id="editConfirmBtn">Valider</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Reset -->
+<div class="overlay" id="modalReset">
+  <div class="modal-box">
+    <h2 style="color:var(--muted)">Remettre a zero</h2>
+    <p>Toutes les coches seront effacees. Noms et quantites conserves.</p>
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeModal('modalReset')">Annuler</button>
+      <button class="modal-btn confirm-del" onclick="doReset()">Confirmer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Envoyer a Fays -->
+<div class="overlay" id="modalShare" onclick="closeModalBg(event,'modalShare')">
+  <div class="modal-box">
+    <h2 style="color:var(--fays)">Envoyer a Fays</h2>
+    <p>Un lien WhatsApp va s'ouvrir. Fays verra ta liste avec tes coches et pourra faire les siennes.</p>
+    <div class="modal-row" style="margin-bottom:12px;">
+      <button class="modal-btn confirm-fays" onclick="sendWhatsApp()">Ouvrir WhatsApp</button>
+    </div>
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeModal('modalShare')">Fermer</button>
+      <button class="modal-btn cancel" onclick="copyShareLink()">Copier le lien</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Ticket Fournisseur -->
+<div class="overlay" id="modalTicket" onclick="closeModalBg(event,'modalTicket')">
+  <div class="modal-box">
+    <h2 style="color:var(--text)">Ticket Fournisseur</h2>
+    <p>Liste sans emoji, prete pour WhatsApp fournisseur. Articles a 0 exclus.</p>
+    <textarea class="modal-textarea big" id="ticketText" readonly></textarea>
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeModal('modalTicket')">Fermer</button>
+      <button class="modal-btn confirm-ok" style="background:#ddd;color:#111" onclick="copyTicket()">Copier</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Valider -->
+<div class="overlay" id="modalValider" onclick="closeModalBg(event,'modalValider')">
+  <div class="modal-box">
+    <h2 style="color:var(--accent)">Valider les courses</h2>
+    <p>La session sera archivee. Les coches seront remises a zero.</p>
+    <div class="valider-summary" id="validerSummary"></div>
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeModal('modalValider')">Annuler</button>
+      <button class="modal-btn confirm-ok" onclick="doValider()">Valider et archiver</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Categories ────────────────────────────────────────────────────────────────
+const CATEGORIES = [
+  { title: "Viandes & Volailles", items: [
+    { name: "Sachet Cordon Bleu", qty: 5 },
+    { name: "Carton Tenders", qty: 3 },
+    { name: "Carton Tenders Epice", qty: 4 },
+    { name: "Carton Wings", qty: 5 },
+    { name: "Carton Steak 120g", qty: 1 },
+    { name: "Carton Steak 45g", qty: 2 },
+    { name: "Barquette Escalope", qty: 3 },
+    { name: "Bacon Boeuf", qty: 2 },
+    { name: "Sachets Nuggets", qty: 8 },
+    { name: "Carton Kebab", qty: 1 },
+    { name: "Pain Kebab", qty: 4 },
+  ]},
+  { title: "Feculents & Fritures", items: [
+    { name: "Carton Frite Gold 6/6", qty: 8 },
+    { name: "Riz Cambodgien", qty: 3 },
+    { name: "Carton Galettes 32", qty: 2 },
+  ]},
+  { title: "Fromages & Laitiers", items: [
+    { name: "Emmental Valmartin tranches", qty: 2 },
+    { name: "Emmental Rape Valmartin sachet", qty: 2 },
+    { name: "Fromage a Raclette", qty: 1 },
+    { name: "Cheddar", qty: 2 },
+    { name: "Boursin", qty: 2 },
+    { name: "Plaquette d'Oeufs", qty: 1 },
+    { name: "Seau Creme Epaisse", qty: 1 },
+    { name: "Pack Creme President", qty: 1 },
+    { name: "President beurre", qty: 1 },
+  ]},
+  { title: "Apero & Surgeles", items: [
+    { name: "Sachet Jalapenos", qty: 9 },
+    { name: "Sachet Stick Mozza", qty: 9 },
+    { name: "Sachet Bouchee Camembert", qty: 9 },
+    { name: "Sachet Oignon Crispy", qty: 2 },
+  ]},
+  { title: "Sauces", items: [
+    { name: "Seau Sauce Crousty", qty: 4 },
+    { name: "Sauce Chili Thai", qty: 8 },
+    { name: "Sauce Biggy Maitre Saucier", qty: 3 },
+    { name: "Sauce Samourai", qty: 1 },
+    { name: "Sauce Brazil", qty: 1 },
+    { name: "Sauce Algerien Nawals", qty: 4 },
+    { name: "Sauce Barbecue Nawals", qty: 4 },
+    { name: "Sauce Blanche Nawals", qty: 3 },
+    { name: "Sauce Poivre Maitre Saucier", qty: 1 },
+    { name: "Sauce Chilli Piment", qty: 1 },
+  ]},
+  { title: "Boissons", items: [
+    { name: "Coca Canette Rouge", qty: 1 },
+    { name: "Pack Coca EU", qty: 3 },
+    { name: "Pack Coca Cherry EU", qty: 3 },
+    { name: "Pack Fanta Orange", qty: 1 },
+    { name: "Pack Fanta Citron", qty: 1 },
+    { name: "Oasis Framboise", qty: 1 },
+    { name: "Pack Oasis Fraise Framboise", qty: 1 },
+    { name: "Pack Oasis Tropical", qty: 3 },
+    { name: "Pack Schweppes Pomme", qty: 3 },
+    { name: "Pack Ice Tea", qty: 2 },
+  ]},
+  { title: "Emballages", items: [
+    { name: "Carton Sac Kraft", qty: 2 },
+    { name: "Carton Sachet Plastique Blanc", qty: 1 },
+    { name: "Boite Sandwich TT10", qty: 2 },
+    { name: "Boite Tasty Crousty", qty: 1 },
+    { name: "Boite Burger", qty: 1 },
+    { name: "Emballage Burger", qty: 1 },
+    { name: "Emballe Frite Sachet", qty: 1, imp: true },
+    { name: "Seau Bucket", qty: 2 },
+    { name: "Gros Pain Burger 1004", qty: 1 },
+    { name: "Petit Pain Burger 1200", qty: 1 },
+  ]},
+  { title: "Consommables & Divers", items: [
+    { name: "Carton 45 Tickets Imprimante", qty: 2 },
+    { name: "Aluminium", qty: 1 },
+    { name: "Cellophane Celo", qty: 1 },
+    { name: "Sac Poubelle", qty: 1 },
+    { name: "Cuillere", qty: 1 },
+    { name: "Tomate", qty: 1 },
+    { name: "Bidon d'Huile", qty: 4 },
+  ]},
+];
+
+// ─── State ─────────────────────────────────────────────────────────────────────
+function defaultState() {
+  const s = { quantities: {}, moi: {}, fays: {}, names: {}, deleted: {}, extras: {}, archives: [], viewMode: 'moi' };
+  CATEGORIES.forEach(cat => cat.items.forEach((item, i) => {
+    s.quantities[key(cat.title, i)] = item.qty;
+  }));
+  return s;
+}
+
+let ST = defaultState();
+
+// viewMode : 'moi' = tu coches tes cases | 'fays' = Fays coche ses cases
+// Quand Fays ouvre le lien, elle voit viewMode='fays' automatiquement
+
+function key(cat, i) { return cat + '__' + i; }
+
+// ─── JSONBin config ────────────────────────────────────────────────────────────
+const JSONBIN_KEY = '$2a$10$KWAYb5GIB1Qfn1tiAKr5B.eOvtqc6rkFlgHCgsc/n88IlGIjA1hBu';
+const JSONBIN_BASE = 'https://api.jsonbin.io/v3';
+let BIN_ID = null;
+
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(url, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', 'X-Master-Key': JSONBIN_KEY, ...(opts.headers || {}) }
+  });
+  if (!res.ok) throw new Error('API ' + res.status);
+  return res.json();
+}
+
+async function createBin(data) {
+  const res = await apiFetch(JSONBIN_BASE + '/b', {
+    method: 'POST',
+    headers: { 'X-Bin-Name': 'courses-' + Date.now(), 'X-Bin-Private': 'false' },
+    body: JSON.stringify(data)
+  });
+  return res.metadata.id;
+}
+
+async function readBin(id) {
+  const res = await apiFetch(JSONBIN_BASE + '/b/' + id + '/latest');
+  return res.record;
+}
+
+async function updateBin(id, data) {
+  await apiFetch(JSONBIN_BASE + '/b/' + id, { method: 'PUT', body: JSON.stringify(data) });
+}
+
+function getShareable() {
+  return { quantities: ST.quantities, moi: ST.moi, names: ST.names, deleted: ST.deleted, extras: ST.extras, archives: ST.archives };
+}
+
+let saveTimer = null;
+function save() {
+  try { localStorage.setItem('courses_v5', JSON.stringify(ST)); } catch(e) {}
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(syncToCloud, 800);
+}
+
+async function syncToCloud() {
+  if (!BIN_ID) return;
+  try { await updateBin(BIN_ID, getShareable()); } catch(e) { console.warn('Sync echoue:', e); }
+}
+
+async function ensureBin() {
+  BIN_ID = localStorage.getItem('courses_bin_id');
+  if (BIN_ID) return;
+  try {
+    BIN_ID = await createBin(getShareable());
+    localStorage.setItem('courses_bin_id', BIN_ID);
+  } catch(e) { console.warn('Creation bin echouee:', e); }
+}
+
+function buildShareLink() {
+  if (!BIN_ID) return window.location.href;
+  return 'https://Mada489.github.io/courses/?fays=' + BIN_ID;
+}
+
+async function loadFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const faysBin = params.get('fays');
+  if (!faysBin) return false;
+  try {
+    document.querySelector('.loading-screen p').textContent = 'Chargement de la liste...';
+    const data = await readBin(faysBin);
+    if (data && data.quantities) {
+      ST.quantities = data.quantities || {};
+      ST.moi = data.moi || {};
+      ST.names = data.names || {};
+      ST.deleted = data.deleted || {};
+      ST.extras = data.extras || {};
+      ST.archives = data.archives || [];
+      ST.viewMode = 'fays';
+      BIN_ID = faysBin;
+      return true;
+    }
+  } catch(e) { console.warn('Chargement fays echoue:', e); }
+  return false;
+}
+
+async function init() {
+  const fromUrl = await loadFromUrl();
+  if (!fromUrl) {
+    try {
+      const saved = JSON.parse(localStorage.getItem('courses_v5') || 'null');
+      if (saved && saved.quantities) {
+        if (!saved.extras) saved.extras = {};
+        if (!saved.archives) saved.archives = [];
+        if (!saved.viewMode) saved.viewMode = 'moi';
+        ST = saved;
+      }
+    } catch(e) {}
+    await ensureBin();
+  }
+  updateModeBanner();
+  render();
+  renderArchives();
+  document.getElementById('loadingScreen').style.display = 'none';
+}
+
+
+function updateModeBanner() {
+  const banner = document.getElementById('modeBanner');
+  const txt = document.getElementById('modeTxt');
+  const sub = document.getElementById('headerSub');
+  if (ST.viewMode === 'fays') {
+    banner.className = 'mode-banner mode-fays';
+    txt.textContent = 'Tu es Fays — coche tes courses ci-dessous';
+    sub.textContent = 'Liste recue — mode Fays';
+    document.getElementById('btnValider').style.display = 'none';
+  } else {
+    banner.className = 'mode-banner mode-moi';
+    txt.textContent = 'Tu es en mode MOI — seule ta colonne est cochable';
+    sub.textContent = 'Liste partagee';
+    document.getElementById('btnValider').style.display = '';
+  }
+}
+
+// ─── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  const root = document.getElementById('list');
+  root.innerHTML = '';
+  let total = 0, dMoi = 0, dFays = 0;
+
+  CATEGORIES.forEach(cat => {
+    const sec = document.createElement('div');
+    sec.className = 'section';
+    const hd = document.createElement('div');
+    hd.className = 'section-title';
+    hd.textContent = cat.title;
+    sec.appendChild(hd);
+
+    cat.items.forEach((item, i) => {
+      const k = key(cat.title, i);
+      if (ST.deleted[k]) return;
+      const moiDone = !!ST.moi[k];
+      const faysDone = !!ST.fays[k];
+      const qty = ST.quantities[k] ?? item.qty;
+      const name = ST.names[k] ?? item.name;
+      total++; if (moiDone) dMoi++; if (faysDone) dFays++;
+      sec.appendChild(buildRow(k, name, qty, moiDone, faysDone, !!item.imp));
+    });
+
+    (ST.extras[cat.title] || []).forEach((extra, ei) => {
+      if (extra.deleted) return;
+      const k = 'extra__' + cat.title + '__' + ei;
+      const moiDone = !!ST.moi[k];
+      const faysDone = !!ST.fays[k];
+      const qty = ST.quantities[k] ?? extra.qty;
+      const name = ST.names[k] ?? extra.name;
+      total++; if (moiDone) dMoi++; if (faysDone) dFays++;
+      sec.appendChild(buildRow(k, name, qty, moiDone, faysDone, false, cat.title, ei));
+    });
+
+    // Bouton ajout seulement en mode moi
+    if (ST.viewMode === 'moi') {
+      const addBtn = document.createElement('button');
+      addBtn.className = 'add-item-btn';
+      addBtn.textContent = '+ Ajouter un article ici';
+      addBtn.addEventListener('click', () => openAdd(cat.title));
+      sec.appendChild(addBtn);
+    }
+
+    root.appendChild(sec);
+  });
+
+  document.getElementById('cntMoi').textContent = dMoi;
+  document.getElementById('totalAll').textContent = total;
+  document.getElementById('cntFays').textContent = dFays;
+  document.getElementById('totalAll2').textContent = total;
+  document.getElementById('fillMoi').style.width = total ? (dMoi/total*100)+'%' : '0%';
+  document.getElementById('fillFays').style.width = total ? (dFays/total*100)+'%' : '0%';
+}
+
+function buildRow(k, name, qty, moiDone, faysDone, isImp, catTitle, extraIdx) {
+  const row = document.createElement('div');
+  row.className = 'item' + (moiDone && faysDone ? ' both-done' : '');
+
+  const wMoi = chkWrap('moi', k, moiDone);
+  const wFays = chkWrap('fays', k, faysDone);
+
+  const nameSpan = document.createElement('span');
+  nameSpan.className = 'item-name';
+  nameSpan.textContent = name;
+
+  row.append(wMoi, wFays, nameSpan);
+  if (isImp) { const b = document.createElement('span'); b.className = 'badge-imp'; b.textContent = '!'; row.append(b); }
+
+  // Controles edition seulement en mode moi
+  if (ST.viewMode === 'moi') {
+    const editBtn = document.createElement('button');
+    editBtn.className = 'action-btn edit'; editBtn.textContent = '✏️';
+    editBtn.addEventListener('click', () => openEdit(k, name));
+
+    const qtyWrap = document.createElement('div');
+    qtyWrap.className = 'qty-wrap';
+    const btnM = document.createElement('button');
+    btnM.className = 'qty-btn'; btnM.textContent = '−';
+    btnM.addEventListener('click', () => { ST.quantities[k] = Math.max(0, (ST.quantities[k] ?? 1) - 1); save(); render(); });
+    const qtyInp = document.createElement('input');
+    qtyInp.className = 'qty-val'; qtyInp.type = 'text'; qtyInp.value = qty;
+    qtyInp.addEventListener('change', () => {
+      let v = parseInt(qtyInp.value); if (isNaN(v) || v < 0) v = 0;
+      ST.quantities[k] = v; save(); render();
+    });
+    const btnP = document.createElement('button');
+    btnP.className = 'qty-btn'; btnP.textContent = '+';
+    btnP.addEventListener('click', () => { ST.quantities[k] = (ST.quantities[k] ?? 0) + 1; save(); render(); });
+    qtyWrap.append(btnM, qtyInp, btnP);
+
+    const delBtn = document.createElement('button');
+    delBtn.className = 'action-btn del'; delBtn.textContent = '🗑️';
+    delBtn.addEventListener('click', () => openDel(k, name, catTitle, extraIdx));
+
+    row.append(editBtn, qtyWrap, delBtn);
+  } else {
+    // En mode fays on affiche juste la quantite en lecture seule
+    const qtyLabel = document.createElement('span');
+    qtyLabel.style.cssText = 'font-size:0.8rem;color:var(--accent);font-family:Syne,sans-serif;font-weight:700;flex-shrink:0;';
+    qtyLabel.textContent = 'x' + qty;
+    row.append(qtyLabel);
+  }
+
+  return row;
+}
+
+function chkWrap(who, k, done) {
+  const wrap = document.createElement('div');
+  wrap.className = 'chk-wrap';
+  const box = document.createElement('div');
+  const canTouch = (who === ST.viewMode);
+  box.className = 'chk' + (done ? ' ' + who + '-done' : '') + (!canTouch ? ' locked' : '');
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width','11'); svg.setAttribute('height','11'); svg.setAttribute('viewBox','0 0 12 12');
+  const pl = document.createElementNS('http://www.w3.org/2000/svg','polyline');
+  pl.setAttribute('points','2,6 5,9 10,3');
+  pl.setAttribute('stroke', done ? (who==='moi'?'#0f0f0f':'#0a1e1c') : '#fff');
+  pl.setAttribute('stroke-width','2.2'); pl.setAttribute('fill','none');
+  pl.setAttribute('stroke-linecap','round'); pl.setAttribute('stroke-linejoin','round');
+  svg.appendChild(pl); box.appendChild(svg);
+  if (canTouch) {
+    box.addEventListener('click', () => { ST[who][k] = !ST[who][k]; save(); render(); });
+  } else {
+    box.addEventListener('click', () => showToast('Passe en mode ' + (who === 'moi' ? 'MOI' : 'FAYS') + ' pour cette case'));
+  }
+  const lbl = document.createElement('span');
+  lbl.className = 'chk-label ' + who;
+  lbl.textContent = who === 'moi' ? 'MOI' : 'FAYS';
+  wrap.append(box, lbl);
+  return wrap;
+}
+
+// ─── Archives ──────────────────────────────────────────────────────────────────
+function renderArchives() {
+  const wrap = document.getElementById('archivesWrap');
+  if (!ST.archives || !ST.archives.length) { wrap.innerHTML = ''; return; }
+  let html = '<div class="archives-section"><div class="archives-title">Historique</div>';
+  ST.archives.slice().reverse().forEach((a, ri) => {
+    const idx = ST.archives.length - 1 - ri;
+    const hasItems = a.items && a.items.length;
+    html += `<div class="archive-card">
+      <div class="archive-date">${a.date}</div>
+      <div class="archive-stats">
+        <span class="s-moi">MOI ${a.dMoi}/${a.total}</span>
+        <span class="s-fays">FAYS ${a.dFays}/${a.total}</span>
+        <span>${a.total} articles</span>
+        ${hasItems ? `<span style="margin-left:auto;cursor:pointer;color:#444;font-size:0.72rem;font-family:Syne,sans-serif;font-weight:700;" onclick="toggleArchive(${idx})">▼ voir</span>` : ''}
+      </div>`;
+    if (hasItems) {
+      html += `<div id="archive-items-${idx}" style="display:none;margin-top:10px;border-top:1px solid #1e1e1e;padding-top:8px;">`;
+      let currentCat = '';
+      a.items.forEach(it => {
+        if (it.cat !== currentCat) {
+          currentCat = it.cat;
+          html += `<div style="font-size:0.62rem;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:#333;margin:8px 0 4px;">${it.cat}</div>`;
+        }
+        const moiIcon = it.moiDone ? `<span style="color:var(--accent);font-size:0.7rem;font-weight:700;">✓ MOI</span>` : `<span style="color:#2a2a2a;font-size:0.7rem;">— MOI</span>`;
+        const faysIcon = it.faysDone ? `<span style="color:var(--fays);font-size:0.7rem;font-weight:700;">✓ FAYS</span>` : `<span style="color:#2a2a2a;font-size:0.7rem;">— FAYS</span>`;
+        html += `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;font-size:0.8rem;opacity:${(it.moiDone || it.faysDone) ? '1' : '0.35'}">
+          <span style="flex:1;">${it.name}</span>
+          <span style="color:var(--accent);font-family:Syne,sans-serif;font-size:0.75rem;">x${it.qty}</span>
+          ${moiIcon} ${faysIcon}
+        </div>`;
+      });
+      html += `</div>`;
+    }
+    html += `</div>`;
+  });
+  html += '</div>';
+  wrap.innerHTML = html;
+}
+
+function toggleArchive(idx) {
+  const el = document.getElementById('archive-items-' + idx);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  // Update label
+  const card = el.closest('.archive-card');
+  const btn = card ? card.querySelector('[onclick^="toggleArchive"]') : null;
+  if (btn) btn.textContent = isOpen ? '▼ voir' : '▲ masquer';
+}
+
+// ─── Modals ────────────────────────────────────────────────────────────────────
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+function closeModalBg(e, id) { if (e.target === document.getElementById(id)) closeModal(id); }
+
+// Suppression
+let pendingDelKey = null, pendingDelCat = null, pendingDelEI = null;
+function openDel(k, name, catTitle, extraIdx) {
+  pendingDelKey = k; pendingDelCat = catTitle ?? null; pendingDelEI = extraIdx ?? null;
+  document.getElementById('delMsg').textContent = 'Supprimer "' + name + '" ?';
+  document.getElementById('modalDel').classList.add('open');
+}
+document.getElementById('delConfirmBtn').addEventListener('click', () => {
+  if (pendingDelKey) {
+    if (pendingDelCat !== null && pendingDelEI !== null) ST.extras[pendingDelCat][pendingDelEI].deleted = true;
+    else ST.deleted[pendingDelKey] = true;
+    save(); render();
+  }
+  closeModal('modalDel'); showToast('Article supprime');
+  pendingDelKey = null; pendingDelCat = null; pendingDelEI = null;
+});
+
+// Renommer
+let pendingEditKey = null;
+function openEdit(k, currentName) {
+  pendingEditKey = k;
+  document.getElementById('editInput').value = currentName;
+  document.getElementById('modalEdit').classList.add('open');
+  setTimeout(() => document.getElementById('editInput').focus(), 120);
+}
+document.getElementById('editConfirmBtn').addEventListener('click', doEdit);
+document.getElementById('editInput').addEventListener('keydown', e => { if (e.key === 'Enter') doEdit(); });
+function doEdit() {
+  const val = document.getElementById('editInput').value.trim();
+  if (val && pendingEditKey) { ST.names[pendingEditKey] = val; save(); render(); }
+  closeModal('modalEdit');
+  pendingEditKey = null;
+}
+
+// Ajouter
+let pendingAddCat = null;
+function openAdd(catTitle) {
+  pendingAddCat = catTitle;
+  document.getElementById('addCatLabel').textContent = catTitle;
+  document.getElementById('addNameInput').value = '';
+  document.getElementById('addQtyInput').value = '1';
+  document.getElementById('modalAdd').classList.add('open');
+  setTimeout(() => document.getElementById('addNameInput').focus(), 120);
+}
+document.getElementById('addConfirmBtn').addEventListener('click', doAdd);
+document.getElementById('addNameInput').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('addQtyInput').focus(); });
+document.getElementById('addQtyInput').addEventListener('keydown', e => { if (e.key === 'Enter') doAdd(); });
+function doAdd() {
+  const name = document.getElementById('addNameInput').value.trim();
+  const qty = parseInt(document.getElementById('addQtyInput').value) || 1;
+  if (!name || !pendingAddCat) { closeModal('modalAdd'); return; }
+  if (!ST.extras[pendingAddCat]) ST.extras[pendingAddCat] = [];
+  const ei = ST.extras[pendingAddCat].length;
+  ST.extras[pendingAddCat].push({ name, qty });
+  const k = 'extra__' + pendingAddCat + '__' + ei;
+  ST.quantities[k] = qty;
+  save(); render();
+  closeModal('modalAdd');
+  showToast('"' + name + '" ajoute');
+  pendingAddCat = null;
+}
+
+// Reset
+function openReset() { document.getElementById('modalReset').classList.add('open'); }
+function doReset() {
+  ST.moi = {}; ST.fays = {};
+  save(); render();
+  closeModal('modalReset');
+  showToast('Coches remises a zero');
+}
+
+// Valider
+function openValider() {
+  let total = 0, dMoi = 0, dFays = 0;
+  CATEGORIES.forEach(cat => {
+    cat.items.forEach((item, i) => {
+      const k = key(cat.title, i);
+      if (ST.deleted[k]) return;
+      total++;
+      if (ST.moi[k]) dMoi++;
+      if (ST.fays[k]) dFays++;
+    });
+    (ST.extras[cat.title] || []).forEach((extra, ei) => {
+      if (extra.deleted) return;
+      const k = 'extra__' + cat.title + '__' + ei;
+      total++;
+      if (ST.moi[k]) dMoi++;
+      if (ST.fays[k]) dFays++;
+    });
+  });
+  document.getElementById('validerSummary').innerHTML = `
+    <div class="valider-row"><span class="label">Total articles</span><span>${total}</span></div>
+    <div class="valider-row"><span class="label">Coches par MOI</span><span class="val-moi">${dMoi} / ${total}</span></div>
+    <div class="valider-row"><span class="label">Coches par FAYS</span><span class="val-fays">${dFays} / ${total}</span></div>
+  `;
+  document.getElementById('modalValider').classList.add('open');
+}
+
+function doValider() {
+  let total = 0, dMoi = 0, dFays = 0;
+  const items = [];
+  CATEGORIES.forEach(cat => {
+    cat.items.forEach((item, i) => {
+      const k = key(cat.title, i);
+      if (ST.deleted[k]) return;
+      const name = ST.names[k] ?? item.name;
+      const qty = ST.quantities[k] ?? item.qty;
+      const moiDone = !!ST.moi[k];
+      const faysDone = !!ST.fays[k];
+      total++; if (moiDone) dMoi++; if (faysDone) dFays++;
+      items.push({ name, qty, moiDone, faysDone, cat: cat.title });
+    });
+    (ST.extras[cat.title] || []).forEach((extra, ei) => {
+      if (extra.deleted) return;
+      const k = 'extra__' + cat.title + '__' + ei;
+      const name = ST.names[k] ?? extra.name;
+      const qty = ST.quantities[k] ?? extra.qty;
+      const moiDone = !!ST.moi[k];
+      const faysDone = !!ST.fays[k];
+      total++; if (moiDone) dMoi++; if (faysDone) dFays++;
+      items.push({ name, qty, moiDone, faysDone, cat: cat.title });
+    });
+  });
+  const now = new Date();
+  const date = now.toLocaleDateString('fr-FR', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+  if (!ST.archives) ST.archives = [];
+  ST.archives.push({ date, total, dMoi, dFays, items });
+  // Reset coches seulement
+  ST.moi = {}; ST.fays = {};
+  save(); render(); renderArchives();
+  closeModal('modalValider');
+  showToast('Courses validees !');
+}
+
+// Partage avec Fays via WhatsApp
+function openShare() {
+  document.getElementById('modalShare').classList.add('open');
+}
+
+function buildMessage() {
+  const link = buildShareLink();
+  return 'Salut Fays ! Voici la liste de courses, clique sur le lien pour voir ma liste et cocher les tiennes :\n\n' + link;
+}
+
+function sendWhatsApp() {
+  const msg = encodeURIComponent(buildMessage());
+  window.open('https://wa.me/?text=' + msg, '_blank');
+  closeModal('modalShare');
+}
+
+function copyShareLink() {
+  const link = buildShareLink();
+  try { navigator.clipboard.writeText(link); } catch(e) {
+    const ta = document.createElement('textarea');
+    ta.value = link; document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }
+  closeModal('modalShare');
+  showToast('Lien copie !');
+}
+
+// Ticket fournisseur
+function openTicket() {
+  const now = new Date();
+  const date = now.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  const time = now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  let lines = [];
+  lines.push('COMMANDE DU ' + date + ' - ' + time);
+  lines.push('================================');
+  lines.push('');
+
+  CATEGORIES.forEach(cat => {
+    const visibles = [];
+    cat.items.forEach((item, i) => {
+      const k = key(cat.title, i);
+      if (ST.deleted[k]) return;
+      const qty = ST.quantities[k] ?? item.qty;
+      if (qty < 1) return;
+      if (!ST.moi[k] && !ST.fays[k]) return; // exclure non coches
+      const name = ST.names[k] ?? item.name;
+      visibles.push({ qty, name });
+    });
+    (ST.extras[cat.title] || []).forEach((extra, ei) => {
+      if (extra.deleted) return;
+      const k = 'extra__' + cat.title + '__' + ei;
+      const qty = ST.quantities[k] ?? extra.qty;
+      if (qty < 1) return;
+      if (!ST.moi[k] && !ST.fays[k]) return; // exclure non coches
+      const name = ST.names[k] ?? extra.name;
+      visibles.push({ qty, name });
+    });
+    if (!visibles.length) return;
+    lines.push(cat.title.toUpperCase());
+    lines.push('--------------------------------');
+    visibles.forEach(v => { lines.push(('x' + v.qty).padEnd(5) + v.name); });
+    lines.push('');
+  });
+
+  lines.push('================================');
+  lines.push('Merci de confirmer la commande.');
+  document.getElementById('ticketText').value = lines.join('\n');
+  document.getElementById('modalTicket').classList.add('open');
+}
+
+function copyTicket() {
+  const t = document.getElementById('ticketText');
+  t.select();
+  try { document.execCommand('copy'); } catch(e) { navigator.clipboard.writeText(t.value); }
+  closeModal('modalTicket');
+  showToast('Ticket copie !');
+}
+
+// Toast
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ─── Boot ──────────────────────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
